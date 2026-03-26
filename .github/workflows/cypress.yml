@@ -1,36 +1,61 @@
 name: Cypress CI
 
+# 🔥 Evita rodar várias pipelines ao mesmo tempo
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# 🎯 Quando o CI roda
 on:
   push:
     branches: [ main ]
+    paths:
+      - "cypress/**"
+      - ".github/workflows/**"
+      - "package.json"
   pull_request:
     branches: [ main ]
+
+# ⚡ Força Node 24 (futuro do GitHub)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar repositório
+      # 📥 Clona o repositório
+      - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Instalar Node
+      # 🟢 Instala Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'   # 🚀 cache para acelerar
+          cache: 'npm'
 
+      # 📦 Instala dependências
       - name: Instalar dependências
-        run: npm ci   # 🔥 melhor que npm install
+        run: npm ci
 
-      - name: Rodar Cypress
+      # 🧪 Rodar testes Cypress
+      - name: Rodar Cypress (headless)
         run: npx cypress run
 
-      - name: Upload de evidências
-        uses: actions/upload-artifact@v4
+      # 📸 Salvar screenshots (se falhar)
+      - name: Upload de screenshots
         if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          name: cypress-artifacts
-          path: |
-            cypress/screenshots
-            cypress/videos
+          name: screenshots
+          path: cypress/screenshots
+
+      # 🎥 Salvar vídeos (se falhar)
+      - name: Upload de vídeos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos
+          path: cypress/videos
