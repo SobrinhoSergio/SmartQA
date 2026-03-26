@@ -1,61 +1,51 @@
-name: Cypress CI
+name: End-to-end tests
 
-# 🔥 Evita rodar várias pipelines ao mesmo tempo
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# 🎯 Quando o CI roda
-on:
-  push:
-    branches: [ main ]
-    paths:
-      - "cypress/**"
-      - ".github/workflows/**"
-      - "package.json"
-  pull_request:
-    branches: [ main ]
-
-# ⚡ Força Node 24 (futuro do GitHub)
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   cypress-run:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
-      # 📥 Clona o repositório
-      - name: Checkout do código
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 🟢 Instala Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      # 📦 Instala dependências
-      - name: Instalar dependências
-        run: npm ci
+      - name: Cypress run
+        uses: cypress-io/github-action@v5
 
-      # 🧪 Rodar testes Cypress
-      - name: Rodar Cypress (headless)
-        run: npx cypress run
-
-      # 📸 Salvar screenshots (se falhar)
-      - name: Upload de screenshots
+      - name: Upload screenshots
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots
+          name: cypress-screenshots
           path: cypress/screenshots
+          if-no-files-found: ignore
 
-      # 🎥 Salvar vídeos (se falhar)
-      - name: Upload de vídeos
+      - name: Upload videos
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: videos
+          name: cypress-videos
           path: cypress/videos
+          if-no-files-found: ignore
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🧪 Resultado dos Testes Cypress" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Autor: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
